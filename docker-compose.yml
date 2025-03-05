@@ -1,0 +1,10 @@
+services:
+  resilience4j:
+    image: adityarajverma/resilience4j
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resilience4j
+    restart: always
+    ports:
+      - "8080:8080"
