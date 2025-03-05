@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: Resilience4j
+    port: 8080
+
+#Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  metrics:
+    tags:
+      application: resilience4j-demo
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentService:
+        failureRateThreshold: 50 # Trips circuit if failures exceed 50%
+        slowCallRateThreshold: 50 # Trips circuit if slow calls exceed 50%
+        slowCallDurationThreshold: 2s # Calls taking >2s are considered slow
+        minimumNumberOfCalls: 5 # Minimum calls before evaluating the circuit
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s # Wait 10s before moving to Half-Open state
+        permittedNumberOfCallsInHalfOpenState: 3 # Allow 3 test calls in Half-Open
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10 # Evaluates last 10 calls
+
+  retry:
+    instances:
+      paymentService:
+        maxAttempts: 3 # Retry up to 3 times
+        waitDuration: 2s # Wait 2 seconds between retries
+        exponentialBackoffMultiplier: 2 # Doubles wait time after each failure
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+
+  ratelimiter:
+    instances:
+      paymentService:
+        limitForPeriod: 5 # Allow 5 calls per refresh period
+        limitRefreshPeriod: 10s # Refresh the limit every 10 seconds
+        timeoutDuration: 500ms # Wait 500ms before rejecting the request
+
+  bulkhead:
+    instances:
+      paymentService:
+        maxConcurrentCalls: 10 # Maximum 10 parallel requests
+        maxWaitDuration: 2s # Wait max 2s for available slots
+
+  timelimiter:
+    instances:
+      paymentService:
+        timeoutDuration: 3s # Requests taking >3s will timeout
+        cancelRunningFuture: true
