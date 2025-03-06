@@ -22,6 +22,10 @@ Include the required dependencies in `pom.xml`:
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-actuator</artifactId>
 </dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-aop</artifactId>
+</dependency>
 ```
 ✔ **Actuator** is used for monitoring **Resilience4j metrics**.
 
@@ -79,24 +83,50 @@ resilience4j:
 ## **3. Implementing Circuit Breaker, Retry, and Rate Limiting**
 ### **Controller with Resilience4j Annotations**
 ```java
+package com.example.resilience4j.controller;
+
+
+import com.example.resilience4j.service.PaymentService;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Random;
+
+@RestController
+@RequestMapping("/payment")
+public class PaymentController {
+
+    PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+
+    PaymentService paymentService;
 
     @GetMapping("/pay")
     @CircuitBreaker(name = "paymentService", fallbackMethod = "fallbackPayment")
     @Retry(name = "paymentService")
-    @RateLimiter(name = "paymentService")
-    @Bulkhead(name = "paymentService")
-    @TimeLimiter(name = "paymentService")
+//    @RateLimiter(name = "paymentService")
+//    @Bulkhead(name = "paymentService")
+//    @TimeLimiter(name = "paymentService")
+//     If you want to use above annotation than please change  to below code
+//    public CompletableFuture<ResponseEntity<String>> processPayment(@RequestParam double amount) {
+//        return CompletableFuture.supplyAsync(() -> paymentService.pay(amount));
+//    }
+
+//    public CompletableFuture<ResponseEntity<String>> fallbackPayment(double amount, Exception e) {
+//        return CompletableFuture.supplyAsync(() -> ResponseEntity.status(503)
+//                .body("Payment system is down. Please try again later."));
+//    }
+
     public ResponseEntity<String> makePayment(@RequestParam(name = "amount") double amount) {
         return paymentService.makePayment(amount);
     }
@@ -107,7 +137,9 @@ import java.util.concurrent.TimeUnit;
 }
 
 @Service
- Random random = new Random();
+public class PaymentService {
+
+    Random random = new Random();
     public ResponseEntity<String> makePayment(double amount) {
 
         if(random.nextBoolean()) {
@@ -116,6 +148,7 @@ import java.util.concurrent.TimeUnit;
 
         return ResponseEntity.ok("Payment successful for amount: " + amount);
     }
+}
 ```
 
 ---
@@ -138,10 +171,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics
+        include: health,metrics,* # Expose all endpoints
   metrics:
     tags:
-      application: resilience4j-demo
+      application: resilience4j
 ```
 ### **Check Circuit Breaker Status via Actuator**
 ```sh
