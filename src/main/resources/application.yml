@@ -8,10 +8,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics
+        include: health,metrics,* # Expose all endpoints
   metrics:
     tags:
-      application: resilience4j-demo
+      application: resilience4j
 
 resilience4j:
   circuitbreaker:
